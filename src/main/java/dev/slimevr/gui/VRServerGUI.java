@@ -50,6 +50,7 @@ public class VRServerGUI extends JFrame {
 	private final SkeletonList skeletonList;
 	private JButton resetButton;
 	private EJBox pane;
+	private final TimedResetWindow timedReset;
 
 	private static File bvhSaveDir = new File("BVH Recordings");
 	private final ServerPoseStreamer poseStreamer;
@@ -96,6 +97,7 @@ public class VRServerGUI extends JFrame {
 		
 		this.trackersList = new TrackersList(server, this);
 		this.skeletonList = new SkeletonList(server, this);
+		this.timedReset = new TimedResetWindow(server);
 		
 		this.poseStreamer = new ServerPoseStreamer(server);
 
@@ -171,6 +173,37 @@ public class VRServerGUI extends JFrame {
 		
 		pane.add(new EJBoxNoStretch(LINE_AXIS, false, true) {{
 			setBorder(new EmptyBorder(i(5)));
+
+			JCheckBox timedResetCb;
+			add(timedResetCb = new JCheckBox("Timed Reset"));
+			timedResetCb.setSelected(false);
+			timedResetCb.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if(timedResetCb.isSelected()){
+						LogManager.log.debug("starting reset timer...");
+						TimedResetTimer.runTimer(
+								server.config.getInt("resetTime", 300),
+								server. config.getInt("resetDelay", 3),
+								server.config.getString("soundFile", ""),
+								server.config.getInt("soundVolume", 100),
+								server.config.getBoolean("FullReset", true) ? server::resetTrackers : server::resetTrackersYaw);
+					} else {
+						LogManager.log.debug("cancelling reset timer...");
+						TimedResetTimer.cancelTimer();
+					}
+				}
+			});
+
+			add(new JButton("Timed Reset Config") {{
+				addMouseListener(new MouseInputAdapter() {
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						timedReset.setVisible(true);
+						timedReset.toFront();
+					}
+				});
+			}});
 			
 			add(Box.createHorizontalGlue());
 			add(resetButton = new JButton("RESET") {{
